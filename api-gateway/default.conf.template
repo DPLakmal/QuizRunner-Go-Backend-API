@@ -1,0 +1,58 @@
+upstream auth_service {
+    server auth-service.railway.internal:8080;
+}
+
+upstream user_service {
+    server user-service.railway.internal:8080;
+}
+
+upstream quiz_service {
+    server quiz-service.railway.internal:8080;
+}
+
+upstream result_service {
+    server result-service.railway.internal:8080;
+}
+
+upstream notification_service {
+    server notification-service.railway.internal:8080;
+}
+
+server {
+    listen ${PORT};
+    listen [::]:${PORT};
+
+    # Root Endpoint
+    location = / {
+        default_type application/json;
+        return 200 '{"status":"ok", "message":"Quiz Backend API Gateway is running!"}';
+    }
+
+    # Auth Service
+    location /register {
+        proxy_pass http://auth_service;
+    }
+    location /login {
+        proxy_pass http://auth_service;
+    }
+
+    # User Service
+    location /users {
+        proxy_pass http://user_service;
+    }
+
+    # Quiz Service
+    location /quizzes {
+        proxy_pass http://quiz_service;
+    }
+
+    # Result Service
+    location /results {
+        proxy_pass http://result_service;
+    }
+
+    # Notification Service
+    location /notifications {
+        proxy_pass http://notification_service;
+    }
+}
