@@ -1,6 +1,6 @@
 module github.com/pubudulakmal/quiz-backend/user-service
 
-go 1.26.4
+go 1.23
 
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect

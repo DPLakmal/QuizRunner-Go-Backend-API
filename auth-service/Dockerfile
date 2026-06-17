@@ -1,10 +1,8 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:alpine AS builder
 
 WORKDIR /app
-# We need to copy the workspace files and the shared pkg directory
-COPY go.work go.work.sum* ./
-COPY pkg/ pkg/
-COPY auth-service/ auth-service/
+# Copy the entire workspace to satisfy go.work
+COPY . .
 
 WORKDIR /app/auth-service
 RUN go mod download

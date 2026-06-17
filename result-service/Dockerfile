@@ -1,9 +1,8 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:alpine AS builder
 
 WORKDIR /app
-COPY go.work go.work.sum* ./
-COPY pkg/ pkg/
-COPY result-service/ result-service/
+# Copy the entire workspace to satisfy go.work
+COPY . .
 
 WORKDIR /app/result-service
 RUN go mod download
