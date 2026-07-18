@@ -1,16 +1,23 @@
-FROM golang:alpine AS builder
+FROM golang:1.23-alpine AS builder
 
-WORKDIR /app
-# Copy the entire workspace to satisfy go.work
-COPY . .
+WORKDIR /build
 
-WORKDIR /app/notification-service
+# Copy only the service's go.mod and go.sum first
+COPY go.mod go.sum ./
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
+
+# Copy only the src/cmd directory for this service
+COPY cmd/main.go ./
+COPY internal/ ./internal/
+
+WORKDIR /build/cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main
 
 FROM alpine:latest
-WORKDIR /root/
-COPY --from=builder /app/notification-service/main .
+WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata
+COPY --from=builder /app/main .
 
 EXPOSE 8080
+
 CMD ["./main"]
