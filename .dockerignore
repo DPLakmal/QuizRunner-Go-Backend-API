@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+*.md
+docker-compose.yml
+Makefile
+api-gateway/
+notification-service/
+quiz-service/
+result-service/
+user-service/
+db/
