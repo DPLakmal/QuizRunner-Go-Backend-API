@@ -15,9 +15,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      default:
-        aliases:
-          - db.railway.internal
+      - quiz-network
 
   auth-service:
     build:
@@ -26,7 +24,7 @@ services:
     ports:
       - "8081:8080"
     environment:
-      - DB_HOST=db.railway.internal
+      - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
@@ -36,9 +34,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      default:
-        aliases:
-          - auth-service.railway.internal
+      - quiz-network
 
   user-service:
     build:
@@ -47,7 +43,7 @@ services:
     ports:
       - "8082:8080"
     environment:
-      - DB_HOST=db.railway.internal
+      - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
@@ -57,9 +53,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      default:
-        aliases:
-          - user-service.railway.internal
+      - quiz-network
 
   quiz-service:
     build:
@@ -68,7 +62,7 @@ services:
     ports:
       - "8083:8080"
     environment:
-      - DB_HOST=db.railway.internal
+      - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
@@ -78,9 +72,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      default:
-        aliases:
-          - quiz-service.railway.internal
+      - quiz-network
 
   result-service:
     build:
@@ -89,7 +81,7 @@ services:
     ports:
       - "8084:8080"
     environment:
-      - DB_HOST=db.railway.internal
+      - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
@@ -99,9 +91,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      default:
-        aliases:
-          - result-service.railway.internal
+      - quiz-network
 
   notification-service:
     build:
@@ -110,7 +100,7 @@ services:
     ports:
       - "8085:8080"
     environment:
-      - DB_HOST=db.railway.internal
+      - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
@@ -120,24 +110,38 @@ services:
       db:
         condition: service_healthy
     networks:
-      default:
-        aliases:
-          - notification-service.railway.internal
+      - quiz-network
 
   api-gateway:
     build:
       context: ./api-gateway
-      dockerfile: Dockerfile
+      dockerfile: api-gateway/Dockerfile
     ports:
       - "8080:80"
     environment:
       - PORT=80
+      - UPSTREAM_8080=http://auth-service:8080
+      - UPSTREAM_8081=http://user-service:8081
+      - UPSTREAM_8082=http://quiz-service:8082
+      - UPSTREAM_8083=http://result-service:8083
+      - UPSTREAM_8084=http://result-service:8084
+      - UPSTREAM_8085=http://notification-service:8085
     depends_on:
       - auth-service
       - user-service
       - quiz-service
       - result-service
       - notification-service
+    networks:
+      - quiz-network
+
+networks:
+  quiz-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/24
 
 volumes:
   postgres_data:

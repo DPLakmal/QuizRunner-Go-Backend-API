@@ -1,21 +1,21 @@
 upstream auth_service {
-    server auth-service.railway.internal:8080;
+    server auth-service:8080;
 }
 
 upstream user_service {
-    server user-service.railway.internal:8080;
+    server user-service:8080;
 }
 
 upstream quiz_service {
-    server quiz-service.railway.internal:8080;
+    server quiz-service:8080;
 }
 
 upstream result_service {
-    server result-service.railway.internal:8080;
+    server result-service:8080;
 }
 
 upstream notification_service {
-    server notification-service.railway.internal:8080;
+    server notification-service:8080;
 }
 
 server {
