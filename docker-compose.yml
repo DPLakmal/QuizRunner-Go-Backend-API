@@ -114,7 +114,7 @@ services:
 
   api-gateway:
     build:
-      context: ./api-gateway
+      context: .
       dockerfile: api-gateway/Dockerfile
     ports:
       - "8080:80"
