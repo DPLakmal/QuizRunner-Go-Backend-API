@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"errors"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -10,12 +9,53 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Load configuration from mounted config volume
+func LoadConfig(path string) *domain.AuthConfig {
+	return domain.LoadConfig(path)
+}
+
+// Application-wide JWT secret, loaded from config at startup
+var JWTSecret string = "supersecretkey" // Replace with a cryptographically secure random string in production
+
 type authUseCase struct {
 	repo domain.AuthRepository
 }
 
-func NewAuthUseCase(r domain.AuthRepository) domain.AuthUseCase {
+func NewAuthUseCase(r domain.AuthRepository, jwtSecret string) domain.AuthUseCase {
+	JWTSecret = jwtSecret
 	return &authUseCase{repo: r}
+}
+
+// LoadConfig loads configuration from a JSON file
+// This is called once at application startup
+func LoadConfig(path string) {
+	config := domain.LoadConfig(path)
+	if config == nil {
+		return
+	}
+	if config.JWTSecret != "" {
+		JWTSecret = config.JWTSecret
+	}
+	if config.Port != "" {
+		// Default port for usecase (not applicable directly)
+	}
+}
+
+func NewAuthUseCase(r domain.AuthRepository, jwtSecret string) domain.AuthUseCase {
+	JWTSecret = jwtSecret
+	return &authUseCase{repo: r}
+}
+
+// LoadConfig loads configuration from a JSON file
+// This is called once at application startup before creating usecases
+func LoadConfig(path string) {
+	config := domain.LoadConfig(path)
+	if config == nil {
+		return
+	}
+	if config.JWTSecret != "" {
+		JWTSecret = config.JWTSecret
+	}
 }
 
 func (u *authUseCase) Register(username, email, password string) (*domain.User, error) {
@@ -62,13 +102,12 @@ func (u *authUseCase) Login(email, password string) (string, error) {
 	}
 
 	// Generate JWT
-	secret := os.Getenv("JWT_SECRET")
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(secret))
+	tokenString, err := token.SignedString([]byte(JWTSecret))
 	if err != nil {
 		return "", err
 	}

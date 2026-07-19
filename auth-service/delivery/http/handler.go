@@ -1,19 +1,39 @@
 package http
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pubudulakmal/quiz-backend/auth-service/domain"
 )
 
-type AuthHandler struct {
-	authUseCase domain.AuthUseCase
+// defaultConfig is used when the config file cannot be loaded
+var defaultConfig = &AuthConfig{
+	JWTSecret: "supersecretkey", // Replace with a cryptographically secure random string in production
 }
 
-func NewAuthHandler(r *gin.Engine, us domain.AuthUseCase) {
+type AuthConfig struct {
+	JWTSecret string
+	Port      string
+}
+
+type AuthHandler struct {
+	authUseCase domain.AuthUseCase
+	config      *AuthConfig
+}
+
+func NewAuthHandler(r *gin.Engine, us domain.AuthUseCase, jwtSecret string) {
+	// Load configuration from mounted volume
+	config := loadConfig("/configs/auth.json")
+	if config.JWTSecret == "" {
+		config = defaultConfig
+	}
+
 	handler := &AuthHandler{
 		authUseCase: us,
+		config:      &config,
 	}
 	r.POST("/register", handler.Register)
 	r.POST("/login", handler.Login)
@@ -60,4 +80,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+// loadConfig loads configuration from a JSON file
+func loadConfig(path string) *AuthConfig {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		// Return default config if file doesn't exist
+		return defaultConfig
+	}
+	var config AuthConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		// Return default config if JSON is invalid
+		return defaultConfig
+	}
+	return &config
 }

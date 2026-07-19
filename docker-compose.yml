@@ -2,41 +2,33 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: quiz_user
-      POSTGRES_PASSWORD: quiz_password
-      POSTGRES_DB: quiz_db
-    ports:
-      - "5432:5432"
+      - POSTGRES_USER=quiz_user
+      - POSTGRES_PASSWORD=quiz_password
+      - POSTGRES_DB=quiz_db
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U quiz_user -d quiz_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - quiz-db-data:/var/lib/postgresql/data
     networks:
       - quiz-network
+    restart: unless-stopped
 
-  auth-service:
+  auth:
+  auth:
     build:
       context: .
       dockerfile: auth-service/Dockerfile
     ports:
       - "8081:8080"
     environment:
-      - DB_HOST=db
-      - DB_USER=quiz_user
-      - DB_PASSWORD=quiz_password
-      - DB_NAME=quiz_db
-      - DB_PORT=5432
-      - JWT_SECRET=supersecretkey
+      - DATABASE_URL=postgresql://quiz_user:quiz_password@db:5432/quiz_db
+      - JWT_SECRET=your_jwt_secret_key
+      - PORT=8080
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
     networks:
       - quiz-network
 
-  user-service:
+  user:
     build:
       context: .
       dockerfile: user-service/Dockerfile
@@ -48,67 +40,69 @@ services:
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
       - DB_PORT=5432
-      - JWT_SECRET=supersecretkey
+      - PORT=8080
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
     networks:
       - quiz-network
 
-  quiz-service:
+  quiz:
     build:
       context: .
       dockerfile: quiz-service/Dockerfile
     ports:
-      - "8083:8080"
+      - "5000:5000"
     environment:
       - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
       - DB_PORT=5432
-      - JWT_SECRET=supersecretkey
+      - PORT=5000
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
     networks:
       - quiz-network
 
-  result-service:
+  result:
     build:
       context: .
       dockerfile: result-service/Dockerfile
     ports:
-      - "8084:8080"
+      - "5002:5000"
     environment:
-      - DB_HOST=db
-      - DB_USER=quiz_user
-      - DB_PASSWORD=quiz_password
-      - DB_NAME=quiz_db
-      - DB_PORT=5432
-      - JWT_SECRET=supersecretkey
+      - DATABASE_URL=postgresql://quiz_user:quiz_password@db:5432/quiz_db
+      - PORT=5000
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
+      quiz:
+        condition: service_started
     networks:
       - quiz-network
 
-  notification-service:
+  notification:
     build:
       context: .
       dockerfile: notification-service/Dockerfile
     ports:
-      - "8085:8080"
+      - "5001:5000"
     environment:
       - DB_HOST=db
       - DB_USER=quiz_user
       - DB_PASSWORD=quiz_password
       - DB_NAME=quiz_db
       - DB_PORT=5432
-      - JWT_SECRET=supersecretkey
+      - PORT=5000
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=your_email@gmail.com
+      - SMTP_PASSWORD=your_email_password
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_started
     networks:
       - quiz-network
 
@@ -117,23 +111,16 @@ services:
       context: ./api-gateway
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "8083:80"
+    environment:
+      - AUTH_PORT=8081
     depends_on:
-      - auth-service
-      - user-service
-      - quiz-service
-      - result-service
-      - notification-service
+      - auth
+      - user
+      - quiz
+      - result
+      - notification
     networks:
       - quiz-network
 
-networks:
-  quiz-network:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.20.0.0/24
 
-volumes:
-  postgres_data:

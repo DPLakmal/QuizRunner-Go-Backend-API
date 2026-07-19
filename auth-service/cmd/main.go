@@ -14,6 +14,7 @@ import (
 
 func main() {
 	database := db.InitDB()
+	defer database.Close()
 
 	// Auto migrate
 	database.AutoMigrate(&domain.User{})
@@ -22,13 +23,21 @@ func main() {
 
 	authRepo := repository.NewPostgresAuthRepository(database)
 	authUC := usecase.NewAuthUseCase(authRepo)
-	http.NewAuthHandler(r, authUC)
 
+	// Load config from mounted volume or use environment variable
+	config := domain.LoadConfig("/configs/auth.json")
+	if config == nil {
+		config = auth.Config
+	}
+	http.NewAuthHandler(r, authUC, config.JWTSecret)
+
+	// Get port from environment variable or use default
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	
 	log.Printf("Auth Service starting on port %s", port)
+	log.Printf("Using JWT_SECRET configured: %s", config.JWTSecret)
 	r.Run(":" + port)
 }
